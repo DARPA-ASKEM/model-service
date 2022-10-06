@@ -1,6 +1,6 @@
 module demo
 
-# See Genine framework example here
+# See Genie framework example here
 # https://genieframework.github.io/Genie.jl/dev/tutorials/5--Handling_Query_Params.html
 #
 # See also this notebook
@@ -12,7 +12,7 @@ using Genie.Requests
 using Genie.Renderer.Json
 
 using Catlab
-using Catlab.CategoricalAlgebra 
+using Catlab.CategoricalAlgebra
 using Catlab.Programs
 using Catlab.WiringDiagrams
 using Catlab.Graphics.Graphviz
@@ -26,7 +26,7 @@ route("/api/models/:model_id") do
     key = payload(:model_id)
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
-    if !haskey(modelDict, key) 
+    if !haskey(modelDict, key)
         return json("not found")
     end
     model = modelDict[key]
@@ -48,20 +48,20 @@ route("/api/models", method = PUT) do
     println(modelDict)
 
     return json(
-         Dict([ 
+         Dict([
                (:id, modelId)
          ])
     )
 end
 
 
-# Add nodes and edges, a more natural way of adding components instead of solely relying 
+# Add nodes and edges, a more natural way of adding components instead of solely relying
 # on indices
 route("/api/models/:model_id", method = POST) do
     key = payload(:model_id)
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
-    if !haskey(modelDict, key) 
+    if !haskey(modelDict, key)
         return json("not found")
     end
 
@@ -88,7 +88,7 @@ route("/api/models/:model_id", method = POST) do
             source = Symbol(e["source"])
             target = Symbol(e["target"])
 
-            if isnothing(findfirst(x -> x == source, subparts.sname)) == false 
+            if isnothing(findfirst(x -> x == source, subparts.sname)) == false
                 sourceIdx = findfirst(x -> x == source, subparts.sname)
                 targetIdx = findfirst(x -> x == target, subparts.tname)
 
@@ -99,11 +99,11 @@ route("/api/models/:model_id", method = POST) do
                 sourceIdx = findfirst(x -> x == source, subparts.tname)
                 targetIdx = findfirst(x -> x == target, subparts.sname)
 
-                add_parts!(model, :O, 1, os=sourceIdx, ot=targetIdx) 
+                add_parts!(model, :O, 1, os=sourceIdx, ot=targetIdx)
             end
         end
     end
-    
+
     # Serialize back
     # println("Serializing back")
     modelDict[key] = model
@@ -116,7 +116,7 @@ end
 route("/api/models/:model_id/json") do
     key = payload(:model_id)
 
-    if !haskey(modelDict, key) 
+    if !haskey(modelDict, key)
         return json("not found")
     end
 
@@ -125,6 +125,18 @@ route("/api/models/:model_id/json") do
 
     return json(dataOut)
 end
+
+
+# Configuration
+# FIXME: Remove this later when quarkus API sever is fully configured to do forwarding/proxying routes
+Genie.config.cors_headers["Access-Control-Allow-Origin"] = "*"
+Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
+Genie.config.cors_headers["Access-Control-Allow-Methods"] ="GET,POST,PUT,DELETE,OPTIONS"
+Genie.config.cors_allowed_origins = ["*"]
+
+# Genie.Configuration.config!(
+#    cors_allowed_origins = ["*"]
+# )
 
 
 # Start the API
