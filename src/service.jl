@@ -99,7 +99,7 @@ route("/api/models/:model_id", method = POST) do
                 sourceIdx = findfirst(x -> x == source, subparts.tname)
                 targetIdx = findfirst(x -> x == target, subparts.sname)
 
-                add_parts!(model, :O, 1, os=sourceIdx, ot=targetIdx)
+                add_parts!(model, :O, 1, ot=sourceIdx, os=targetIdx)
             end
         end
     end
