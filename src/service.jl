@@ -17,6 +17,8 @@ using Catlab.Programs
 using Catlab.WiringDiagrams
 using Catlab.Graphics.Graphviz
 using AlgebraicPetri
+using OrdinaryDiffEq
+
 
 const modelDict = Dict{String, LabelledPetriNet}()
 
@@ -124,6 +126,57 @@ route("/api/models/:model_id/json") do
     dataOut = generate_json_acset(model)
 
     return json(dataOut)
+end
+
+
+
+# Run an ODE solver, just testing.
+#
+# {
+#   variables: {
+#     <name>: val
+#   },
+#   parameters: {
+#     <name>: val 
+#   }
+# }
+route("/api/models/:model_id/simulate", method = POST) do
+    key = payload(:model_id)
+    data = jsonpayload()
+
+    if !haskey(modelDict, key)
+        return json("not found")
+    end
+    model = modelDict[key]
+
+    println(">>>>")
+    println(data)
+
+    variableNames = []
+    variables = Float32[]
+    parameters = Float32[]
+
+    for name in model.subparts.sname
+        push!(variableNames, name)
+        push!(variables, data["variables"][name])
+    end
+
+    for name in model.subparts.tname
+        push!(parameters, data["parameters"][name])
+    end
+
+    temp = PetriNet(model)
+
+    problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
+    solution = solve(problem, Tsit5(), abstol=1e-8);
+
+    return json(
+         Dict([
+               (:t, solution.t),
+               (:u, solution.u),
+               (:variables, variableNames)
+         ])
+    )
 end
 
 
