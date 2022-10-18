@@ -83,23 +83,25 @@ route("/api/models/:model_id", method = POST) do
 
     # edges
     if haskey(data, "edges")
-        subparts = model.subparts
+        # Grab a json/dict object that is easier to inspect and likely less prone
+        # to changes
+        subpartsDict = generate_json_acset(model)
 
         for e in data["edges"]
 
             source = Symbol(e["source"])
             target = Symbol(e["target"])
 
-            if isnothing(findfirst(x -> x == source, subparts.sname)) == false
-                sourceIdx = findfirst(x -> x == source, subparts.sname)
-                targetIdx = findfirst(x -> x == target, subparts.tname)
+            if isnothing(findfirst(x -> x.sname == source, subpartsDict[:S])) == false
+                sourceIdx = findfirst(x -> x.sname == source, subpartsDict[:S])
+                targetIdx = findfirst(x -> x.tname == target, subpartsDict[:T])
 
                 add_parts!(model, :I, 1, is=sourceIdx, it=targetIdx)
             end
 
-            if isnothing(findfirst(x -> x == source, subparts.tname)) == false
-                sourceIdx = findfirst(x -> x == source, subparts.tname)
-                targetIdx = findfirst(x -> x == target, subparts.sname)
+            if isnothing(findfirst(x -> x.tname == source, subpartsDict[:T])) == false
+                sourceIdx = findfirst(x -> x.tname == source, subpartsDict[:T])
+                targetIdx = findfirst(x -> x.sname == target, subpartsDict[:S])
 
                 add_parts!(model, :O, 1, ot=sourceIdx, os=targetIdx)
             end
@@ -149,20 +151,19 @@ route("/api/models/:model_id/simulate", method = POST) do
     end
     model = modelDict[key]
 
-    println(">>>>")
-    println(data)
-
     variableNames = []
     variables = Float32[]
     parameters = Float32[]
 
-    for name in model.subparts.sname
-        push!(variableNames, name)
-        push!(variables, data["variables"][name])
+    subpartsDict = generate_json_acset(model)
+
+    for name in subpartsDict[:S]
+        push!(variableNames, name.sname)
+        push!(variables, data["variables"][name.sname])
     end
 
-    for name in model.subparts.tname
-        push!(parameters, data["parameters"][name])
+    for name in subpartsDict[:T]
+        push!(parameters, data["parameters"][name.tname])
     end
 
     temp = PetriNet(model)
