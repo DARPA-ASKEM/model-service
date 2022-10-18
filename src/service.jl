@@ -17,6 +17,8 @@ using Catlab.Programs
 using Catlab.WiringDiagrams
 using Catlab.Graphics.Graphviz
 using AlgebraicPetri
+using OrdinaryDiffEq
+
 
 const modelDict = Dict{String, LabelledPetriNet}()
 
@@ -81,23 +83,25 @@ route("/api/models/:model_id", method = POST) do
 
     # edges
     if haskey(data, "edges")
-        subparts = model.subparts
+        # Grab a json/dict object that is easier to inspect and likely less prone
+        # to changes
+        subpartsDict = generate_json_acset(model)
 
         for e in data["edges"]
 
             source = Symbol(e["source"])
             target = Symbol(e["target"])
 
-            if isnothing(findfirst(x -> x == source, subparts.sname)) == false
-                sourceIdx = findfirst(x -> x == source, subparts.sname)
-                targetIdx = findfirst(x -> x == target, subparts.tname)
+            if isnothing(findfirst(x -> x.sname == source, subpartsDict[:S])) == false
+                sourceIdx = findfirst(x -> x.sname == source, subpartsDict[:S])
+                targetIdx = findfirst(x -> x.tname == target, subpartsDict[:T])
 
                 add_parts!(model, :I, 1, is=sourceIdx, it=targetIdx)
             end
 
-            if isnothing(findfirst(x -> x == source, subparts.tname)) == false
-                sourceIdx = findfirst(x -> x == source, subparts.tname)
-                targetIdx = findfirst(x -> x == target, subparts.sname)
+            if isnothing(findfirst(x -> x.tname == source, subpartsDict[:T])) == false
+                sourceIdx = findfirst(x -> x.tname == source, subpartsDict[:T])
+                targetIdx = findfirst(x -> x.sname == target, subpartsDict[:S])
 
                 add_parts!(model, :O, 1, ot=sourceIdx, os=targetIdx)
             end
@@ -124,6 +128,56 @@ route("/api/models/:model_id/json") do
     dataOut = generate_json_acset(model)
 
     return json(dataOut)
+end
+
+
+
+# Run an ODE solver, just testing.
+#
+# {
+#   variables: {
+#     <name>: val
+#   },
+#   parameters: {
+#     <name>: val 
+#   }
+# }
+route("/api/models/:model_id/simulate", method = POST) do
+    key = payload(:model_id)
+    data = jsonpayload()
+
+    if !haskey(modelDict, key)
+        return json("not found")
+    end
+    model = modelDict[key]
+
+    variableNames = []
+    variables = Float32[]
+    parameters = Float32[]
+
+    subpartsDict = generate_json_acset(model)
+
+    for name in subpartsDict[:S]
+        push!(variableNames, name.sname)
+        push!(variables, data["variables"][name.sname])
+    end
+
+    for name in subpartsDict[:T]
+        push!(parameters, data["parameters"][name.tname])
+    end
+
+    temp = PetriNet(model)
+
+    problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
+    solution = solve(problem, Tsit5(), abstol=1e-8);
+
+    return json(
+         Dict([
+               (:t, solution.t),
+               (:u, solution.u),
+               (:variables, variableNames)
+         ])
+    )
 end
 
 
