@@ -180,6 +180,81 @@ route("/api/models/:model_id/simulate", method = POST) do
     )
 end
 
+#Currently just uses 2 hardcoded labelled petri nets and stratifies them
+#Will need to add many options
+#1) Model A
+#2) Model B
+#3) Type 
+route("/api/models/stratify") do
+    #println(modelDict)
+    #print("------------- Testing Strat Made Easy -------------")
+    #print("\n   -------------   -------------   ------------- \n")
+    SIRD = LabelledPetriNet([:S, :I, :R, :D],
+        :inf => ((:S,:I) => (:I,:I)),
+        :recover => (:I=>:R),
+        :death => (:I=>:D)
+    )
+    #print(SIRD)
+    Quarantine = LabelledPetriNet([:Q,:NQ],
+        :quarantine => ((:NQ)=>(:Q)),
+        :unquarantine => ((:Q)=>(:NQ))
+    )
+    typesP = LabelledPetriNet([:Pop],
+        :infect=>((:Pop, :Pop)=>(:Pop, :Pop)),
+        :disease=>(:Pop=>:Pop),
+        :strata=>(:Pop=>:Pop)
+    )
+    types = map(typesP, Name=name->nothing) # names only needed for visualization
+    SIRD_typed = homomorphism(SIRD, types;
+        initial=(T=[1,2,2],I=[1,2,3,3],O=[1,2,3,3]),
+        type_components=(Name=x->nothing,)
+    )
+
+    Quarantine_typed = homomorphism(Quarantine, types;
+        initial=(T=[3,3],), type_components=(Name=x->nothing,)
+    )
+
+    res = stratify(SIRD_typed=>[[:strata],[:strata],[:strata],[]], # S I R D
+        Quarantine_typed=>[[:disease], [:disease,:infect]],# Q NQ 
+        typesP
+    ) 
+    #println("Result:")
+    #println(res)
+    return res
+end
+
+
+"""
+I am quite surprised we need to add the following two functions. Seems like they should be in CatLab to me
+Modify a typed petri net to add cross terms
+"""
+function add_cross_terms(pn_crossterms, type_system)
+  typed_pn, crossterms = deepcopy.(pn_crossterms)
+  pn = dom(typed_pn)
+  type_comps = Dict([k=>collect(v) for (k,v) in pairs(components(typed_pn))])
+  for (s_i,cts) in enumerate(crossterms)
+    for ct in cts 
+      type_ind = findfirst(==(ct), type_system[:tname])
+      is, os = [incident(type_system, type_ind, f) for f in [:it, :ot]]
+      new_t = add_part!(pn, :T; tname=ct)
+      add_parts!(pn, :I, length(is); is=s_i, it=new_t)
+      add_parts!(pn, :O, length(os); os=s_i, ot=new_t)
+      push!(type_comps[:T], type_ind)
+      append!(type_comps[:I], is); append!(type_comps[:O], os); 
+    end
+  end
+  return homomorphism(pn, codom(typed_pn); initial=type_comps, 
+                      type_components=(Name=x->nothing,),)
+end
+
+"""Add cross terms before taking pullback"""
+function stratify(pn1, pn2, type_system)
+  return pullback([add_cross_terms(pn, type_system) for pn in [pn1, pn2]]) |> apex
+end
+
+
+
+
 
 # Configuration
 # FIXME: Remove this later when quarkus API sever is fully configured to do forwarding/proxying routes
