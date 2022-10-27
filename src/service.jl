@@ -6,6 +6,7 @@ module demo
 # See also this notebook
 # https://github.com/AlgebraicJulia/Structured-Epidemic-Modeling/
 
+import HTTP
 using UUIDs
 using Genie
 using Genie.Requests
@@ -20,38 +21,53 @@ using AlgebraicPetri
 using OrdinaryDiffEq
 
 
-const modelDict = Dict{String, LabelledPetriNet}()
-
-
 # Retrieve a model
 route("/api/models/:model_id") do
     key = payload(:model_id)
-    println(" Checking key $(key) => $(haskey(modelDict, key))")
+    response = HTTP.request(
+      "GET", 
+      "http://localhost:8000/models/$model_id",
+      Dict("Content-type" => "application/json", "Accept" => "text/plain")
+    )
 
-    if !haskey(modelDict, key)
+    if response.status != 200 
         return json("not found")
     end
-    model = modelDict[key]
-    return json(model)
+    return json(generate_json_acset(response.body["body"]))
 end
 
 
 # Create a new empty model
 route("/api/models", method = PUT) do
-    # @info "Creating new model"
-    modelId = string(UUIDs.uuid4())
+    randomModelName = string(UUIDs.uuid4())
+    printlin("Creating $randomModelName")
+ 
 
     # Debugging
     # modelId = "xyz"
 
     model = LabelledPetriNet()
-    modelDict[modelId] = model
 
-    println(modelDict)
+    response = HTTP.request(
+      "POST", 
+      "http://localhost:8000/models",
+      Dict(
+        "Content-type" => "application/json",
+        "Accept" => "text/plain"
+       ),
+      Dict(
+        "name" => randomModelName,
+        "description" => "none",
+        "body" => Dict(
+            "operation_type" => "init",
+            "model_content" => json(model_content)
+        )
+      )
+    )
 
     return json(
          Dict([
-               (:id, modelId)
+               (:id, response.body)
          ])
     )
 end
@@ -61,13 +77,19 @@ end
 # on indices
 route("/api/models/:model_id", method = POST) do
     key = payload(:model_id)
-    println(" Checking key $(key) => $(haskey(modelDict, key))")
 
-    if !haskey(modelDict, key)
+    response = HTTP.request(
+      "GET", 
+      "http://localhost:8000/models/$model_id",
+      Dict("Content-type" => "application/json", "Accept" => "text/plain")
+    )
+
+    if response.status != 200 
         return json("not found")
     end
+    
+    model = read_json_acset(json(response.body["body"]))
 
-    model = modelDict[key]
     data = jsonpayload()
 
     # nodes, need to be processed first, otherwise index assignment will fail for edges
@@ -110,7 +132,18 @@ route("/api/models/:model_id", method = POST) do
 
     # Serialize back
     # println("Serializing back")
-    modelDict[key] = model
+    response = HTTP.request(
+      "POST", 
+      "http://localhost:8000/models/$key",
+      Dict(
+        "Content-type" => "application/json",
+        "Accept" => "text/plain"
+       ),
+      Dict(
+            "operation_type" => "edit",
+            "model_content" => json(generate_json_acset(model_content))
+        )
+    )
 
     return json("done")
 end
@@ -146,10 +179,16 @@ route("/api/models/:model_id/simulate", method = POST) do
     key = payload(:model_id)
     data = jsonpayload()
 
-    if !haskey(modelDict, key)
+    response = HTTP.request(
+      "GET", 
+      "http://localhost:8000/models/$model_id",
+      Dict("Content-type" => "application/json", "Accept" => "text/plain")
+    )
+
+    if response.status != 200 
         return json("not found")
     end
-    model = modelDict[key]
+    model = json(generate_json_acset(response.body["body"]))
 
     variableNames = []
     variables = Float32[]
