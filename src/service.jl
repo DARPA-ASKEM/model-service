@@ -180,8 +180,8 @@ route("/api/models/:model_id/simulate", method = POST) do
     )
 end
 
-#Currently just uses 2 hardcoded labelled petri nets and stratifies them
-#Will need to add many options
+#Provided the ID of 2 models + the ID of the type model for this
+# Stratify said models and return json output
 #1) Model A -> LabelledPetriNet
 #2) Model B -> LabelledPetriNet
 #3) TypeP -> LabelledPetriNet
