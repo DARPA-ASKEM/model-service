@@ -182,45 +182,70 @@ end
 
 #Currently just uses 2 hardcoded labelled petri nets and stratifies them
 #Will need to add many options
-#1) Model A
-#2) Model B
-#3) Type 
-route("/api/models/stratify") do
-    #println(modelDict)
-    #print("------------- Testing Strat Made Easy -------------")
-    #print("\n   -------------   -------------   ------------- \n")
-    SIRD = LabelledPetriNet([:S, :I, :R, :D],
-        :inf => ((:S,:I) => (:I,:I)),
-        :recover => (:I=>:R),
-        :death => (:I=>:D)
-    )
-    #print(SIRD)
-    Quarantine = LabelledPetriNet([:Q,:NQ],
-        :quarantine => ((:NQ)=>(:Q)),
-        :unquarantine => ((:Q)=>(:NQ))
-    )
-    typesP = LabelledPetriNet([:Pop],
-        :infect=>((:Pop, :Pop)=>(:Pop, :Pop)),
-        :disease=>(:Pop=>:Pop),
-        :strata=>(:Pop=>:Pop)
-    )
-    types = map(typesP, Name=name->nothing) # names only needed for visualization
-    SIRD_typed = homomorphism(SIRD, types;
+#1) Model A -> LabelledPetriNet
+#2) Model B -> LabelledPetriNet
+#3) TypeP -> LabelledPetriNet
+route("/api/models/stratify/:modelAID/:modelBID/:typeModelID") do
+    keyA = payload(:modelAID)
+    if !haskey(modelDict, keyA)
+        return json("not found")
+    end
+    keyB = payload(:modelBID)
+    if !haskey(modelDict, keyB)
+        return json("not found")
+    end
+    keyType = payload(:typeModelID)
+    if !haskey(modelDict, keyType)
+        return json("not found")
+    end
+
+    modelA = modelDict[keyA]
+    modelB = modelDict[keyB]
+    typesP = modelDict[keyType]
+
+    #remove the names for types
+    types = map(typesP, Name=name->nothing) 
+    
+    #=
+    https://github.com/AlgebraicJulia/Catlab.jl/blob/master/src/categorical_algebra/CSets.jl 
+    Warning this is said to work in exponential time (NP Problem)
+    Parameters:
+        1) LabelledPetriNet
+        2) LabelledPetriNet (type)
+        3) ?
+        4) ?
+    output:
+        ACSetTransformation object
+    =#
+    modelATyped = homomorphism(modelA, types;
         initial=(T=[1,2,2],I=[1,2,3,3],O=[1,2,3,3]),
         type_components=(Name=x->nothing,)
     )
 
-    Quarantine_typed = homomorphism(Quarantine, types;
+    modelBTyped = homomorphism(modelB, types;
         initial=(T=[3,3],), type_components=(Name=x->nothing,)
     )
 
-    res = stratify(SIRD_typed=>[[:strata],[:strata],[:strata],[]], # S I R D
-        Quarantine_typed=>[[:disease], [:disease,:infect]],# Q NQ 
+    res = stratify(modelATyped=>[[:strata],[:strata],[:strata],[]], # S I R D
+        modelBTyped=>[[:disease], [:disease,:infect]],# Q NQ 
         typesP
     ) 
-    #println("Result:")
-    #println(res)
-    return res
+
+    # println("Model A")
+    # println(generate_json_acset(modelA))
+
+    # println("Model B")
+    # println(generate_json_acset(modelB))
+    
+    # println("Type Model")
+    # println(generate_json_acset(typesP))
+
+    println("Result:")
+    println(res)
+    dataOut = generate_json_acset(res)
+    return json(dataOut)
+
+    
 end
 
 
