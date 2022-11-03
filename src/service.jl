@@ -185,18 +185,13 @@ end
 #1) Model A -> LabelledPetriNet
 #2) Model B -> LabelledPetriNet
 #3) TypeP -> LabelledPetriNet
+#TODO: Chat with TA2 to understand better. Especially on the vectors provided to function as theyre hard coded 
 route("/api/models/stratify/:modelAID/:modelBID/:typeModelID") do
     keyA = payload(:modelAID)
-    if !haskey(modelDict, keyA)
-        return json("not found")
-    end
     keyB = payload(:modelBID)
-    if !haskey(modelDict, keyB)
-        return json("not found")
-    end
     keyType = payload(:typeModelID)
-    if !haskey(modelDict, keyType)
-        return json("not found")
+    if !haskey(modelDict, keyA) || !haskey(modelDict, keyB) || !haskey(modelDict, keyType)
+        return json("one or more models not found")
     end
 
     modelA = modelDict[keyA]
@@ -230,15 +225,6 @@ route("/api/models/stratify/:modelAID/:modelBID/:typeModelID") do
         modelBTyped=>[[:disease], [:disease,:infect]],# Q NQ 
         typesP
     ) 
-
-    # println("Model A")
-    # println(generate_json_acset(modelA))
-
-    # println("Model B")
-    # println(generate_json_acset(modelB))
-    
-    # println("Type Model")
-    # println(generate_json_acset(typesP))
 
     println("Result:")
     println(res)
