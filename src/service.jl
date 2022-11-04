@@ -186,6 +186,7 @@ end
 #2) Model B -> LabelledPetriNet
 #3) TypeP -> LabelledPetriNet
 #TODO: Chat with TA2 to understand better. Especially on the vectors provided to function as theyre hard coded 
+#eg) "initial=(T=[1,2,2],I=[1,2,3,3],O=[1,2,3,3])" "[:strata],[:strata],[:strata],[]"
 route("/api/models/stratify/:modelAID/:modelBID/:typeModelID") do
     keyA = payload(:modelAID)
     keyB = payload(:modelBID)
