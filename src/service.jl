@@ -10,6 +10,7 @@ using UUIDs
 using Genie
 using Genie.Requests
 using Genie.Renderer.Json
+using JSON
 
 using Catlab
 using Catlab.CategoricalAlgebra
@@ -172,6 +173,117 @@ route("/api/models/:model_id/simulate", method = POST) do
     solution = solve(problem, Tsit5(), abstol=1e-8);
 
     return json(
+         Dict([
+               (:t, solution.t),
+               (:u, solution.u),
+               (:variables, variableNames)
+         ])
+    )
+end
+
+
+
+
+
+################################################################################
+# Add subgraph to a model
+################################################################################
+route("/api/add-parts", method = POST) do
+    payload = jsonpayload()
+    model = parse_json_acset(LabelledPetriNet, JSON.json(payload["model"]))
+    parts = payload["parts"]
+
+    # Add nodes, need to be processed first, otherwise index assignment will fail for edges
+    if haskey(parts, "nodes")
+        for n in parts["nodes"]
+            if n["type"] == "S"
+                add_parts!(model, :S, 1, sname=Symbol(n["name"]))
+            elseif n["type"] == "T"
+                add_parts!(model, :T, 1, tname=Symbol(n["name"]))
+            end
+        end
+    end
+
+    # Add edges
+    if haskey(parts, "edges")
+        # Grab a json/dict object that is easier to inspect and likely less prone to changes
+        subpartsDict = generate_json_acset(model)
+
+        for e in parts["edges"]
+
+            source = Symbol(e["source"])
+            target = Symbol(e["target"])
+
+            if isnothing(findfirst(x -> x.sname == source, subpartsDict[:S])) == false
+                sourceIdx = findfirst(x -> x.sname == source, subpartsDict[:S])
+                targetIdx = findfirst(x -> x.tname == target, subpartsDict[:T])
+
+                add_parts!(model, :I, 1, is=sourceIdx, it=targetIdx)
+            end
+
+            if isnothing(findfirst(x -> x.tname == source, subpartsDict[:T])) == false
+                sourceIdx = findfirst(x -> x.tname == source, subpartsDict[:T])
+                targetIdx = findfirst(x -> x.sname == target, subpartsDict[:S])
+
+                add_parts!(model, :O, 1, ot=sourceIdx, os=targetIdx)
+            end
+        end
+    end
+
+    dataOut = generate_json_acset(model)
+    return JSON.json(dataOut)
+end
+
+
+################################################################################
+# Remove subgraph to a model
+# TODO
+################################################################################
+route("/api/rem-parts", method = POST) do
+    return JSON.json(
+         Dict([
+               (:msg, "Not implemented")
+         ])
+    )
+end
+
+
+################################################################################
+# Simulate a petrinet model
+# This is a placeholder for testing ideas for the HMI to deal with parameterization and to deal
+# with simulation output. This will be deprecated once query/simulation plans come online.
+#
+# Input:
+# {
+#   model: { ... },
+#   variables: { [variable1]: val, [variable2]: val, ... }
+#   parameters: { [param1]: val, [param2]: val, ... }
+# }
+################################################################################
+route("/api/simulate", method = POST) do
+    payload = jsonpayload()
+    model = parse_json_acset(LabelledPetriNet, JSON.json(payload["model"]))
+
+    variableNames = []
+    variables = Float32[]
+    parameters = Float32[]
+
+    subpartsDict = generate_json_acset(model)
+
+    for name in subpartsDict[:S]
+        push!(variableNames, name.sname)
+        push!(variables, payload["variables"][name.sname])
+    end
+
+    for name in subpartsDict[:T]
+        push!(parameters, payload["parameters"][name.tname])
+    end
+
+    temp = PetriNet(model)
+    problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
+    solution = solve(problem, Tsit5(), abstol=1e-8);
+
+    return Json.json(
          Dict([
                (:t, solution.t),
                (:u, solution.u),
