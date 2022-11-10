@@ -1,4 +1,4 @@
-name = "model-transform"
+name = "model-service"
 uuid = "47decf57-f457-4d18-8951-196ff91e04e6"
 authors = ["dchang <dchang@uncharted.software>"]
 version = "0.1.0"

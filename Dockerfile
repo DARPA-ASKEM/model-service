@@ -1,6 +1,6 @@
 FROM julia:1.8.1
 
-ADD src /model-transform
+ADD src /model-service
 
 # Pre-install Catlab related dependencies
 RUN julia -e 'import Pkg; Pkg.update()' && \
@@ -12,4 +12,4 @@ RUN julia -e 'import Pkg; Pkg.update()' && \
     julia -e 'import Pkg; Pkg.add("Genie"); using Genie' && \
     julia -e 'import Pkg; Pkg.add("JSON"); using JSON'
 
-CMD julia model-transform/service.jl
+CMD julia model-service/service.jl
