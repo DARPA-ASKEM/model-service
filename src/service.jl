@@ -30,10 +30,10 @@ route("/api/models/:model_id") do
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
     if !haskey(modelDict, key)
-        return json("not found")
+        return JSON.json("not found")
     end
     model = modelDict[key]
-    return json(model)
+    return JSON.json(model)
 end
 
 
@@ -50,7 +50,7 @@ route("/api/models", method = PUT) do
 
     println(modelDict)
 
-    return json(
+    return JSON.json(
          Dict([
                (:id, modelId)
          ])
@@ -65,7 +65,7 @@ route("/api/models/:model_id", method = POST) do
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
     if !haskey(modelDict, key)
-        return json("not found")
+        return JSON.json("not found")
     end
 
     model = modelDict[key]
@@ -113,7 +113,7 @@ route("/api/models/:model_id", method = POST) do
     # println("Serializing back")
     modelDict[key] = model
 
-    return json("done")
+    return JSON.json("done")
 end
 
 
@@ -122,13 +122,13 @@ route("/api/models/:model_id/json") do
     key = payload(:model_id)
 
     if !haskey(modelDict, key)
-        return json("not found")
+        return JSON.json("not found")
     end
 
     model = modelDict[key]
     dataOut = generate_json_acset(model)
 
-    return json(dataOut)
+    return JSON.json(dataOut)
 end
 
 
@@ -148,7 +148,7 @@ route("/api/models/:model_id/simulate", method = POST) do
     data = jsonpayload()
 
     if !haskey(modelDict, key)
-        return json("not found")
+        return JSON.json("not found")
     end
     model = modelDict[key]
 
@@ -172,7 +172,7 @@ route("/api/models/:model_id/simulate", method = POST) do
     problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
     solution = solve(problem, Tsit5(), abstol=1e-8);
 
-    return json(
+    return JSON.json(
          Dict([
                (:t, solution.t),
                (:u, solution.u),
@@ -283,7 +283,7 @@ route("/api/simulate", method = POST) do
     problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
     solution = solve(problem, Tsit5(), abstol=1e-8);
 
-    return Json.json(
+    return JSON.json(
          Dict([
                (:t, solution.t),
                (:u, solution.u),
@@ -292,6 +292,76 @@ route("/api/simulate", method = POST) do
     )
 end
 
+################################################################################
+# Combine petrinets
+#
+# Input:
+# {
+#   modelA: a JSON-serialized petri net
+#   modelB: a JSON-serialized petri net
+#   commonStates: a list of pairs of states (one from each model) that should be combined as part of this operation.
+# }
+################################################################################
+route("/api/models/:model_id/model-composition", method = POST) do
+    key = payload(:model_id)
+    data = JSON.parse(rawpayload()) # Converts JSON to dictionary thoroughly
+
+    if !haskey(modelDict, key)
+        return JSON.json("not found")
+    end
+    model = modelDict[key]
+
+    modelA = data["modelA"]
+    modelB = data["modelB"]
+    commonStates = data["commonStates"]
+
+    # Find ID of names based on order
+    IDsToLink = Dict{String, Array{Int64,1}}("modelA" => [], "modelB" => [])
+
+    # Find common state ids
+    for modelName in ["modelA", "modelB"]
+        for i in 1:length(data[modelName]["S"])
+            if data[modelName]["S"][i]["sname"] == commonStates[1][modelName]
+                push!(IDsToLink[modelName], i)
+                break
+            end
+        end
+    end
+
+    # Will represent the merge petrinet, make a copy of modelA and add on to it
+    mergedModel = deepcopy(modelA)
+
+    # Merge names of places that will be merged
+    for i in 1:length(IDsToLink["modelA"])
+        nameToMergeA = mergedModel["S"][IDsToLink["modelA"][i]]["sname"]
+        nameToMergeB = modelB["S"][IDsToLink["modelB"][i]]["sname"]
+
+        # Merge names, remove name from modelB
+        mergedModel["S"][IDsToLink["modelA"]]["sname"] = string(nameToMergeA, nameToMergeB)
+        splice!(modelB["S"], IDsToLink["modelB"][i])
+    end
+
+    # Merge places, merge transitions
+    append!(mergedModel["S"], modelB["S"])
+    append!(mergedModel["T"], modelB["T"])
+
+    #= Merge inputs and outputs =#
+    # Get final IDs of model A to add to the IDs in model B
+    lastStateID = length(modelA["S"])
+    lastTransitionID = length(modelA["T"])
+    # Update IDs in model B so the places that are not merged in modelA and B are recognized as unique
+    for io in [(IO="I", stateID="is", transitionID="it"), (IO="O", stateID="os", transitionID="ot")]
+        for IDs in modelB[io.IO]
+            if !IDs[io.stateID] in IDsToLink["modelB"]
+                IDs[io.stateID] += lastStateID
+            end
+            IDs[io.transitionID] += lastTransitionID
+        end
+        append!(mergedModel[io.IO], modelB[io.IO])
+    end
+
+    return JSON.json(mergedModel)
+end
 
 # Configuration
 # FIXME: Remove this later when quarkus API sever is fully configured to do forwarding/proxying routes
@@ -300,9 +370,9 @@ Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
 Genie.config.cors_headers["Access-Control-Allow-Methods"] ="GET,POST,PUT,DELETE,OPTIONS"
 Genie.config.cors_allowed_origins = ["*"]
 
-# Genie.Configuration.config!(
-#    cors_allowed_origins = ["*"]
-# )
+Genie.Configuration.config!(
+   cors_allowed_origins = ["*"]
+)
 
 
 # Start the API
