@@ -316,29 +316,37 @@ route("/api/models/:model_id/model-composition", method = POST) do
     commonStates = data["commonStates"]
 
     # Find ID of names based on order
-    IDsToLink = Dict{String, Array{Int64,1}}("modelA" => [], "modelB" => [])
+    IDsToMerge = fill(Dict{String, Int64}("modelA" => 0, "modelB" => 0), length(commonStates))
+    IDsToMergeB = [] # Use for merging inputs and outputs later
 
     # Find common state ids
     for modelName in ["modelA", "modelB"]
-        for i in 1:length(data[modelName]["S"])
-            if data[modelName]["S"][i]["sname"] == commonStates[1][modelName]
-                push!(IDsToLink[modelName], i)
-                break
+        for i in 1:length(commonStates) # Loop through common state names
+            for j in 1:length(data[modelName]["S"]) # Loop through model state names
+                if commonStates[i][modelName] == data[modelName]["S"][j]["sname"]
+                    IDsToMerge[i][modelName] = j
+                    if modelName == "modelB"
+                        push!(IDsToMergeB, j)
+                    end
+                    break
+                end
             end
         end
     end
 
-    # Will represent the merge petrinet, make a copy of modelA and add on to it
+    println(IDsToMerge)
+
+    # Will represent the merged petrinet, make a copy of modelA and add on to it
     mergedModel = deepcopy(modelA)
 
     # Merge names of places that will be merged
-    for i in 1:length(IDsToLink["modelA"])
-        nameToMergeA = mergedModel["S"][IDsToLink["modelA"][i]]["sname"]
-        nameToMergeB = modelB["S"][IDsToLink["modelB"][i]]["sname"]
+    for ID in IDsToMerge
+        nameToMergeA = mergedModel["S"][ID["modelA"]]["sname"]
+        nameToMergeB = modelB["S"][ID["modelB"]]["sname"]
 
         # Merge names, remove name from modelB
-        mergedModel["S"][IDsToLink["modelA"]]["sname"] = string(nameToMergeA, nameToMergeB)
-        splice!(modelB["S"], IDsToLink["modelB"][i])
+        mergedModel["S"][ID["modelA"]]["sname"] = string(nameToMergeA, nameToMergeB)
+        splice!(modelB["S"], ID["modelB"])
     end
 
     # Merge places, merge transitions
@@ -349,10 +357,11 @@ route("/api/models/:model_id/model-composition", method = POST) do
     # Get final IDs of model A to add to the IDs in model B
     lastStateID = length(modelA["S"])
     lastTransitionID = length(modelA["T"])
+
     # Update IDs in model B so the places that are not merged in modelA and B are recognized as unique
     for io in [(IO="I", stateID="is", transitionID="it"), (IO="O", stateID="os", transitionID="ot")]
         for IDs in modelB[io.IO]
-            if !IDs[io.stateID] in IDsToLink["modelB"]
+            if !(IDs[io.stateID] in IDsToMergeB)
                 IDs[io.stateID] += lastStateID
             end
             IDs[io.transitionID] += lastTransitionID
