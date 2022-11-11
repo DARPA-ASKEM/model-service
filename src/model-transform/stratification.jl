@@ -70,10 +70,10 @@ function add_cross_terms(petri_net_crossterms, type_system)
   petri_net = dom(typed_petri_net) #Take LabelledPetriNet from provided Typed PetriNet
   type_comps = Dict([k=>collect(v) for (k,v) in pairs(components(typed_petri_net))])
   for (state_index,cross_terms) in enumerate(crossterms)
-    for cross_term in cross_terms 
-      type_ind = findfirst(==(cross_term), type_system[:tname])
+    for ct in cross_terms 
+      type_ind = findfirst(==(ct), type_system[:tname])
       is, os = [incident(type_system, type_ind, f) for f in [:it, :ot]]
-      new_t = add_part!(petri_net, :T; tname=cross_term)
+      new_t = add_part!(petri_net, :T; tname=ct)
       add_parts!(petri_net, :I, length(is); is=state_index, it=new_t)
       add_parts!(petri_net, :O, length(os); os=state_index, ot=new_t)
       push!(type_comps[:T], type_ind)
