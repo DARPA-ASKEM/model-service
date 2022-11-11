@@ -315,8 +315,14 @@ route("/api/models/:model_id/model-composition", method = POST) do
     modelB = data["modelB"]
     commonStates = data["commonStates"]
 
+    # Check for invalid input
+
     # Find ID of names based on order
-    IDsToMerge = fill(Dict{String, Int64}("modelA" => 0, "modelB" => 0), length(commonStates))
+    IDsToMerge = []
+    for i in 1:length(commonStates)
+        push!(IDsToMerge, Dict{String, Int64}("modelA" => 0, "modelB" => 0))
+    end
+    
     IDsToMergeB = [] # Use for merging inputs and outputs later
 
     # Find common state ids
@@ -334,8 +340,6 @@ route("/api/models/:model_id/model-composition", method = POST) do
         end
     end
 
-    println(IDsToMerge)
-
     # Will represent the merged petrinet, make a copy of modelA and add on to it
     mergedModel = deepcopy(modelA)
 
@@ -346,12 +350,13 @@ route("/api/models/:model_id/model-composition", method = POST) do
 
         # Merge names, remove name from modelB
         mergedModel["S"][ID["modelA"]]["sname"] = string(nameToMergeA, nameToMergeB)
+        splice!(modelA["S"], ID["modelA"]) #
         splice!(modelB["S"], ID["modelB"])
     end
 
     # Merge places, merge transitions
     append!(mergedModel["S"], modelB["S"])
-    append!(mergedModel["T"], modelB["T"])
+    append!(mergedModel["T"], modelB["T"])    
 
     #= Merge inputs and outputs =#
     # Get final IDs of model A to add to the IDs in model B
