@@ -10,7 +10,7 @@ using UUIDs
 using Genie
 using Genie.Requests
 using Genie.Renderer.Json
-using JSON
+using JSON 
 
 using Catlab
 using Catlab.CategoricalAlgebra
@@ -20,6 +20,7 @@ using Catlab.Graphics.Graphviz
 using AlgebraicPetri
 using OrdinaryDiffEq
 include("./model-transform/stratification.jl")
+include("./model-transform/renameNodes.jl")
 
 
 const modelDict = Dict{String, LabelledPetriNet}()
@@ -31,10 +32,10 @@ route("/api/models/:model_id") do
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
     if !haskey(modelDict, key)
-        return json("not found")
+        return JSON.json("not found")
     end
     model = modelDict[key]
-    return json(model)
+    return JSON.json(model)
 end
 
 
@@ -51,7 +52,7 @@ route("/api/models", method = PUT) do
 
     println(modelDict)
 
-    return json(
+    return JSON.json(
          Dict([
                (:id, modelId)
          ])
@@ -66,7 +67,7 @@ route("/api/models/:model_id", method = POST) do
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
     if !haskey(modelDict, key)
-        return json("not found")
+        return JSON.json("not found")
     end
 
     model = modelDict[key]
@@ -114,22 +115,27 @@ route("/api/models/:model_id", method = POST) do
     # println("Serializing back")
     modelDict[key] = model
 
-    return json("done")
+    return JSON.json("done")
 end
 
+#Rename model nodes + transitions based off a model ID
+route("/api/models/rename/:model_id", method = POST) do
+    data = jsonpayload()
+    return(renameNodeEndPoint(:model_id,data))
+end
 
 # Get JSON representation of the model
 route("/api/models/:model_id/json") do
     key = payload(:model_id)
 
     if !haskey(modelDict, key)
-        return json("not found")
+        return JSON.json("not found")
     end
 
     model = modelDict[key]
     dataOut = generate_json_acset(model)
 
-    return json(dataOut)
+    return JSON.json(dataOut)
 end
 
 
@@ -173,7 +179,7 @@ route("/api/models/:model_id/simulate", method = POST) do
     problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
     solution = solve(problem, Tsit5(), abstol=1e-8);
 
-    return json(
+    return JSON.json(
          Dict([
                (:t, solution.t),
                (:u, solution.u),

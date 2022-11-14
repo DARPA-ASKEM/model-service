@@ -2,6 +2,7 @@ using UUIDs
 using Genie
 using Genie.Requests
 using Genie.Renderer.Json
+using JSON
 
 using Catlab
 using Catlab.CategoricalAlgebra
@@ -53,7 +54,7 @@ function stratificationEndPoint(modelAID, modelBID, typeModelID)
 
     res = appendIndexes(res)
     stratifiedModel = generate_json_acset(res)
-    return json(stratifiedModel)
+    return JSON.json(stratifiedModel)
 end
 
 """
