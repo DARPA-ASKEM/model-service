@@ -4,6 +4,8 @@ authors = ["dchang <dchang@uncharted.software>"]
 version = "0.1.0"
 
 [deps]
+AlgebraicPetri = "4f99eebe-17bf-4e98-b6a1-2c4f205a959b"
 Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
 Genie = "c43c736e-a2d1-11e8-161f-af95117fbd1e"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
