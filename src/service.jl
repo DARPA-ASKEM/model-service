@@ -340,7 +340,8 @@ route("/api/models/:model_id/model-composition", method = POST) do
             stateIsFound = false
             # Loop through model state names
             for j in 1:length(data[modelName]["S"]) 
-                if commonStates[i][modelName] == data[modelName]["S"][j]["sname"] # Save ID for common state
+                # Save ID for common state
+                if commonStates[i][modelName] == data[modelName]["S"][j]["sname"] 
                     if j in IDsToMerge[modelName]
                         return JSON.json("The same ID can't be merged twice.")
                     end
@@ -355,8 +356,7 @@ route("/api/models/:model_id/model-composition", method = POST) do
         end
     end
 
-    # Will represent the merged petrinet, make a copy of modelA and add on to it
-    mergedModel = deepcopy(modelA)
+    mergedModel = deepcopy(modelA) # Will represent the merged petrinet (make a copy of modelA and add on to it)
 
     # Merge names of places that will be merged
     for i in 1:length(commonStates)
@@ -372,14 +372,25 @@ route("/api/models/:model_id/model-composition", method = POST) do
     append!(mergedModel["T"], modelB["T"]) # Append modelB transitions to modelA
 
     #= Merge inputs and outputs =#
+    lastGreatestID = length(modelA["S"]) + 1
+    updatedIDs = [] # Remember IDs that were updated
+    amountToIncrease = [] # If we come across the same ID this will tell us how much it should be increased by
+
     # Update IDs in model B so the places that are not merged in modelA and B are recognized as unique
     for io in [(IO="I", stateID="is", transitionID="it"), (IO="O", stateID="os", transitionID="ot")]
-        lastGreatestID = length(modelA["S"]) + 1
         for IDs in modelB[io.IO]
-            if IDs[io.stateID] in IDsToMerge["modelB"]
+            # If the place is supposed to merge make the ID of the place from modelB the same as the one from modelA
+            if IDs[io.stateID] in IDsToMerge["modelB"] 
                 index = findfirst(id -> id == IDs[io.stateID], IDsToMerge["modelB"])
                 IDs[io.stateID] = IDsToMerge["modelA"][index]
-            else 
+            # If we are coming across the same ID again we should increase it by the same amount we did before
+            elseif IDs[io.stateID] in updatedIDs
+                index = findfirst(id -> id == IDs[io.stateID], updatedIDs)
+                IDs[io.stateID] = amountToIncrease[index]
+            # This is a new ID so we assign it with an ID higher than the greatest ID
+            else
+                push!(updatedIDs, IDs[io.stateID])
+                push!(amountToIncrease, lastGreatestID)
                 IDs[io.stateID] = lastGreatestID
                 lastGreatestID += 1
             end
