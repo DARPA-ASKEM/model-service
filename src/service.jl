@@ -311,31 +311,46 @@ route("/api/models/:model_id/model-composition", method = POST) do
     end
     model = modelDict[key]
 
-    modelA = data["modelA"]
-    modelB = data["modelB"]
-    commonStates = data["commonStates"]
-
     # Check for invalid input
+    if !haskey(data, "modelA") || !haskey(data, "modelB") || !haskey(data, "commonStates")
+        return JSON.json("Invalid input")
+    end
+
+    if length(data["commonStates"]) < 1
+        return JSON.json("Empty common states array")
+    end
+
+    modelA::Dict{String, Array{Dict{String, Any}, 1}} = data["modelA"]
+    modelB::Dict{String, Array{Dict{String, Any}, 1}} = data["modelB"]
+    commonStates::Array{Dict{String,String},1} = data["commonStates"]
 
     # Find ID of names based on order
-    IDsToMerge = []
-    for i in 1:length(commonStates)
-        push!(IDsToMerge, Dict{String, Int64}("modelA" => 0, "modelB" => 0))
-    end
-    
-    IDsToMergeB = [] # Use for merging inputs and outputs later
+    IDsToMerge = Dict{String, Array{Int64}}("modelA" => [], "modelB" => [])
 
-    # Find common state ids
+    # Find common state IDs and check if modelA/B and commonStates have their required attributes
     for modelName in ["modelA", "modelB"]
-        for i in 1:length(commonStates) # Loop through common state names
-            for j in 1:length(data[modelName]["S"]) # Loop through model state names
-                if commonStates[i][modelName] == data[modelName]["S"][j]["sname"]
-                    IDsToMerge[i][modelName] = j
-                    if modelName == "modelB"
-                        push!(IDsToMergeB, j)
+        if !haskey(data[modelName], "S") || !haskey(data[modelName], "T") || !haskey(data[modelName], "I") || !haskey(data[modelName], "O")
+            return JSON.json("$modelName is missing S, T, I, O attribute")  # Only level checked for model keys, sname/tname/os etc. are not checked yet
+        end
+        # Loop through common state names
+        for i in 1:length(commonStates) 
+            if !haskey(commonStates[i], modelName)
+                return JSON.json("Common state is missing model name: $modelName")
+            end
+            stateIsFound = false
+            # Loop through model state names
+            for j in 1:length(data[modelName]["S"]) 
+                if commonStates[i][modelName] == data[modelName]["S"][j]["sname"] # Save ID for common state
+                    if j in IDsToMerge[modelName]
+                        return JSON.json("The same ID can't be merged twice.")
                     end
+                    stateIsFound = true
+                    push!(IDsToMerge[modelName], j)
                     break
                 end
+            end
+            if !stateIsFound
+                return JSON.json("Common state label '$(commonStates[i][modelName])' is not found in $modelName")
             end
         end
     end
@@ -344,34 +359,33 @@ route("/api/models/:model_id/model-composition", method = POST) do
     mergedModel = deepcopy(modelA)
 
     # Merge names of places that will be merged
-    for ID in IDsToMerge
-        nameToMergeA = mergedModel["S"][ID["modelA"]]["sname"]
-        nameToMergeB = modelB["S"][ID["modelB"]]["sname"]
+    for i in 1:length(commonStates)
+        nameToMergeA = mergedModel["S"][IDsToMerge["modelA"][i]]["sname"]
+        nameToMergeB = modelB["S"][IDsToMerge["modelB"][i]]["sname"]
 
         # Merge names, remove name from modelB
-        mergedModel["S"][ID["modelA"]]["sname"] = string(nameToMergeA, nameToMergeB)
-        splice!(modelA["S"], ID["modelA"]) #
-        splice!(modelB["S"], ID["modelB"])
+        mergedModel["S"][IDsToMerge["modelA"][i]]["sname"] = string(nameToMergeA, nameToMergeB)
+        splice!(modelB["S"], IDsToMerge["modelB"][i])
     end
 
-    # Merge places, merge transitions
-    append!(mergedModel["S"], modelB["S"])
-    append!(mergedModel["T"], modelB["T"])    
+    append!(mergedModel["S"], modelB["S"]) # Append the rest of the modelB state names that don't merge with modelA states
+    append!(mergedModel["T"], modelB["T"]) # Append modelB transitions to modelA
 
     #= Merge inputs and outputs =#
-    # Get final IDs of model A to add to the IDs in model B
-    lastStateID = length(modelA["S"])
-    lastTransitionID = length(modelA["T"])
-
     # Update IDs in model B so the places that are not merged in modelA and B are recognized as unique
     for io in [(IO="I", stateID="is", transitionID="it"), (IO="O", stateID="os", transitionID="ot")]
+        lastGreatestID = length(modelA["S"]) + 1
         for IDs in modelB[io.IO]
-            if !(IDs[io.stateID] in IDsToMergeB)
-                IDs[io.stateID] += lastStateID
+            if IDs[io.stateID] in IDsToMerge["modelB"]
+                index = findfirst(id -> id == IDs[io.stateID], IDsToMerge["modelB"])
+                IDs[io.stateID] = IDsToMerge["modelA"][index]
+            else 
+                IDs[io.stateID] = lastGreatestID
+                lastGreatestID += 1
             end
-            IDs[io.transitionID] += lastTransitionID
+            IDs[io.transitionID] += length(modelA["T"]) # Last transition ID of modelA
         end
-        append!(mergedModel[io.IO], modelB[io.IO])
+        append!(mergedModel[io.IO], modelB[io.IO]) # Append modelB inputs/outputs to modelA
     end
 
     return JSON.json(mergedModel)
