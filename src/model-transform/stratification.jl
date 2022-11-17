@@ -16,7 +16,7 @@ function stratificationEndPoint(modelAID, modelBID, typeModelID)
     keyB = payload(modelBID)
     keyType = payload(typeModelID)
     if !haskey(modelDict, keyA) || !haskey(modelDict, keyB) || !haskey(modelDict, keyType)
-        return JSON.json("one or more models not found")
+        return json("one or more models not found")
     end
 
     modelA = modelDict[keyA]
