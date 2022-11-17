@@ -313,49 +313,45 @@ end
 # {
 #   modelA: a JSON-serialized petri net
 #   modelB: a JSON-serialized petri net
-#   commonStates: a list of pairs of states (one from each model) that should be combined as part of this operation.
+#   statesToMerge: a list of pairs of states (one from each model) that should be combined as part of this operation.
 # }
 ################################################################################
-route("/api/models/:model_id/model-composition", method = POST) do
-    key = payload(:model_id)
+route("/api/models/model-composition", method = POST) do
     data = JSON.parse(rawpayload()) # Converts JSON to dictionary thoroughly
 
-    if !haskey(modelDict, key)
-        return JSON.json("not found")
-    end
-    model = modelDict[key]
-
     # Check for invalid input
-    if !haskey(data, "modelA") || !haskey(data, "modelB") || !haskey(data, "commonStates")
+    if !haskey(data, "modelA") || !haskey(data, "modelB") || !haskey(data, "statesToMerge")
         return JSON.json("Invalid input")
     end
 
-    if length(data["commonStates"]) < 1
+    if length(data["statesToMerge"]) < 1
         return JSON.json("Empty common states array")
     end
 
     modelA::Dict{String, Array{Dict{String, Any}, 1}} = data["modelA"]
     modelB::Dict{String, Array{Dict{String, Any}, 1}} = data["modelB"]
-    commonStates::Array{Dict{String,String},1} = data["commonStates"]
+    statesToMerge::Array{Dict{String,String},1} = data["statesToMerge"]
 
-    # Find ID of names based on order
+    # Find ID of the states to merge based on order of names
     IDsToMerge = Dict{String, Array{Int64}}("modelA" => [], "modelB" => [])
 
-    # Find common state IDs and check if modelA/B and commonStates have their required attributes
+    # Find IDs to merge and check if modelA/B and statesToMerge have their required attributes
     for modelName in ["modelA", "modelB"]
         if !haskey(data[modelName], "S") || !haskey(data[modelName], "T") || !haskey(data[modelName], "I") || !haskey(data[modelName], "O")
             return JSON.json("$modelName is missing S, T, I, O attribute")  # Only level checked for model keys, sname/tname/os etc. are not checked yet
         end
-        # Loop through common state names
-        for i in 1:length(commonStates) 
-            if !haskey(commonStates[i], modelName)
+        # Loop through states to merge
+        for i in 1:length(statesToMerge) 
+            if !haskey(statesToMerge[i], modelName)
                 return JSON.json("Common state is missing model name: $modelName")
             end
             stateIsFound = false
             # Loop through model state names
             for j in 1:length(data[modelName]["S"]) 
-                # Save ID for common state
-                if commonStates[i][modelName] == data[modelName]["S"][j]["sname"] 
+                stateNameToMerge = statesToMerge[i][modelName]
+                modelStateName = data[modelName]["S"][j]["sname"]
+                # Save ID of model state name which is going to be merged
+                if stateNameToMerge == modelStateName 
                     if j in IDsToMerge[modelName]
                         return JSON.json("The same ID can't be merged twice.")
                     end
@@ -365,7 +361,7 @@ route("/api/models/:model_id/model-composition", method = POST) do
                 end
             end
             if !stateIsFound
-                return JSON.json("Common state label '$(commonStates[i][modelName])' is not found in $modelName")
+                return JSON.json("Common state label '$stateNameToMerge' is not found in $modelName")
             end
         end
     end
@@ -373,7 +369,7 @@ route("/api/models/:model_id/model-composition", method = POST) do
     mergedModel = deepcopy(modelA) # Will represent the merged petrinet (make a copy of modelA and add on to it)
 
     # Merge names of places that will be merged
-    for i in 1:length(commonStates)
+    for i in 1:length(statesToMerge)
         nameToMergeA = mergedModel["S"][IDsToMerge["modelA"][i]]["sname"]
         nameToMergeB = modelB["S"][IDsToMerge["modelB"][i]]["sname"]
 
@@ -391,26 +387,30 @@ route("/api/models/:model_id/model-composition", method = POST) do
     amountToIncrease = [] # If we come across the same ID this will tell us how much it should be increased by
 
     # Update IDs in model B so the places that are not merged in modelA and B are recognized as unique
-    for io in [(IO="I", stateID="is", transitionID="it"), (IO="O", stateID="os", transitionID="ot")]
-        for IDs in modelB[io.IO]
+    for io in [("I", "is", "it"), ("O", "os", "ot")]
+        IO = io[1]
+        stateID = io[2]
+        transitionID = io[3]
+
+        for IDs in modelB[IO] # IDs = {os: stateID, ot: transitionID} or {is: stateID, it: transitionID}
             # If the place is supposed to merge make the ID of the place from modelB the same as the one from modelA
-            if IDs[io.stateID] in IDsToMerge["modelB"] 
-                index = findfirst(id -> id == IDs[io.stateID], IDsToMerge["modelB"])
-                IDs[io.stateID] = IDsToMerge["modelA"][index]
+            if IDs[stateID] in IDsToMerge["modelB"] 
+                index = findfirst(id -> id == IDs[stateID], IDsToMerge["modelB"])
+                IDs[stateID] = IDsToMerge["modelA"][index]
             # If we are coming across the same ID again we should increase it by the same amount we did before
-            elseif IDs[io.stateID] in updatedIDs
-                index = findfirst(id -> id == IDs[io.stateID], updatedIDs)
-                IDs[io.stateID] = amountToIncrease[index]
+            elseif IDs[stateID] in updatedIDs
+                index = findfirst(id -> id == IDs[stateID], updatedIDs)
+                IDs[stateID] = amountToIncrease[index]
             # This is a new ID so we assign it with an ID higher than the greatest ID
             else
-                push!(updatedIDs, IDs[io.stateID])
+                push!(updatedIDs, IDs[stateID])
                 push!(amountToIncrease, lastGreatestID)
-                IDs[io.stateID] = lastGreatestID
+                IDs[stateID] = lastGreatestID
                 lastGreatestID += 1
             end
-            IDs[io.transitionID] += length(modelA["T"]) # Last transition ID of modelA
+            IDs[transitionID] += length(modelA["T"]) # Last transition ID of modelA
         end
-        append!(mergedModel[io.IO], modelB[io.IO]) # Append modelB inputs/outputs to modelA
+        append!(mergedModel[IO], modelB[IO]) # Append modelB inputs/outputs to modelA
     end
 
     return JSON.json(mergedModel)
