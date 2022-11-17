@@ -325,7 +325,7 @@ route("/api/models/model-composition", method = POST) do
     end
 
     if length(data["statesToMerge"]) < 1
-        return JSON.json("Empty common states array")
+        return JSON.json("Empty statesToMerge array")
     end
 
     modelA::Dict{String, Array{Dict{String, Any}, 1}} = data["modelA"]
@@ -343,7 +343,7 @@ route("/api/models/model-composition", method = POST) do
         # Loop through states to merge
         for i in 1:length(statesToMerge) 
             if !haskey(statesToMerge[i], modelName)
-                return JSON.json("Common state is missing model name: $modelName")
+                return JSON.json("statesToMerge array is missing model name: $modelName")
             end
             stateIsFound = false
             # Loop through model state names
@@ -361,7 +361,7 @@ route("/api/models/model-composition", method = POST) do
                 end
             end
             if !stateIsFound
-                return JSON.json("Common state label '$stateNameToMerge' is not found in $modelName")
+                return JSON.json("statesToMerge label '$stateNameToMerge' is not found in $modelName")
             end
         end
     end
