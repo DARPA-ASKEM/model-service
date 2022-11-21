@@ -10,6 +10,7 @@ using UUIDs
 using Genie
 using Genie.Requests
 using Genie.Renderer.Json
+using JSON
 using JSON: json
 
 using Catlab
@@ -31,10 +32,10 @@ route("/api/models/:model_id") do
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
     if !haskey(modelDict, key)
-        return JSON.json("not found")
+        return json("not found")
     end
     model = modelDict[key]
-    return JSON.json(model)
+    return json(model)
 end
 
 
@@ -51,7 +52,7 @@ route("/api/models", method = PUT) do
 
     println(modelDict)
 
-    return JSON.json(
+    return json(
          Dict([
                (:id, modelId)
          ])
@@ -66,7 +67,7 @@ route("/api/models/:model_id", method = POST) do
     println(" Checking key $(key) => $(haskey(modelDict, key))")
 
     if !haskey(modelDict, key)
-        return JSON.json("not found")
+        return json("not found")
     end
 
     model = modelDict[key]
@@ -114,7 +115,7 @@ route("/api/models/:model_id", method = POST) do
     # println("Serializing back")
     modelDict[key] = model
 
-    return JSON.json("done")
+    return json("done")
 end
 
 
@@ -123,13 +124,13 @@ route("/api/models/:model_id/json") do
     key = payload(:model_id)
 
     if !haskey(modelDict, key)
-        return JSON.json("not found")
+        return json("not found")
     end
 
     model = modelDict[key]
     dataOut = generate_json_acset(model)
 
-    return JSON.json(dataOut)
+    return json(dataOut)
 end
 
 
@@ -149,7 +150,7 @@ route("/api/models/:model_id/simulate", method = POST) do
     data = jsonpayload()
 
     if !haskey(modelDict, key)
-        return JSON.json("not found")
+        return json("not found")
     end
     model = modelDict[key]
 
@@ -173,7 +174,7 @@ route("/api/models/:model_id/simulate", method = POST) do
     problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
     solution = solve(problem, Tsit5(), abstol=1e-8);
 
-    return JSON.json(
+    return json(
          Dict([
                (:t, solution.t),
                (:u, solution.u),
@@ -321,11 +322,11 @@ route("/api/models/model-composition", method = POST) do
 
     # Check for invalid input
     if !haskey(data, "modelA") || !haskey(data, "modelB") || !haskey(data, "statesToMerge")
-        return JSON.json("Invalid input")
+        return json("Invalid input")
     end
 
     if length(data["statesToMerge"]) < 1
-        return JSON.json("Empty statesToMerge array")
+        return json("Empty statesToMerge array")
     end
 
     modelA::Dict{String, Array{Dict{String, Any}, 1}} = data["modelA"]
@@ -338,12 +339,12 @@ route("/api/models/model-composition", method = POST) do
     # Find IDs to merge and check if modelA/B and statesToMerge have their required attributes
     for modelName in ["modelA", "modelB"]
         if !haskey(data[modelName], "S") || !haskey(data[modelName], "T") || !haskey(data[modelName], "I") || !haskey(data[modelName], "O")
-            return JSON.json("$modelName is missing S, T, I, O attribute")  # Only level checked for model keys, sname/tname/os etc. are not checked yet
+            return json("$modelName is missing S, T, I, O attribute")  # Only level checked for model keys, sname/tname/os etc. are not checked yet
         end
         # Loop through states to merge
         for i in 1:length(statesToMerge) 
             if !haskey(statesToMerge[i], modelName)
-                return JSON.json("statesToMerge array is missing model name: $modelName")
+                return json("statesToMerge array is missing model name: $modelName")
             end
             stateIsFound = false
             stateNameToMerge = statesToMerge[i][modelName]
@@ -353,7 +354,7 @@ route("/api/models/model-composition", method = POST) do
                 # Save ID of model state name which is going to be merged
                 if stateNameToMerge == modelStateName 
                     if j in IDsToMerge[modelName]
-                        return JSON.json("The same ID can't be merged twice.")
+                        return json("The same ID can't be merged twice.")
                     end
                     stateIsFound = true
                     push!(IDsToMerge[modelName], j)
@@ -361,7 +362,7 @@ route("/api/models/model-composition", method = POST) do
                 end
             end
             if !stateIsFound
-                return JSON.json("statesToMerge label '$stateNameToMerge' is not found in $modelName")
+                return json("statesToMerge label '$stateNameToMerge' is not found in $modelName")
             end
         end
     end
@@ -413,7 +414,7 @@ route("/api/models/model-composition", method = POST) do
         append!(mergedModel[IO], modelB[IO]) # Append modelB inputs/outputs to modelA
     end
 
-    return JSON.json(mergedModel)
+    return json(mergedModel)
 end
 
 # Configuration
