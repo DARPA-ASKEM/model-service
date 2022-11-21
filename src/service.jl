@@ -10,7 +10,7 @@ using UUIDs
 using Genie
 using Genie.Requests
 using Genie.Renderer.Json
-using JSON
+using JSON: json
 
 using Catlab
 using Catlab.CategoricalAlgebra
@@ -204,7 +204,7 @@ end
 ################################################################################
 route("/api/add-parts", method = POST) do
     payload = jsonpayload()
-    model = parse_json_acset(LabelledPetriNet, JSON.json(payload["model"]))
+    model = parse_json_acset(LabelledPetriNet, json(payload["model"]))
     parts = payload["parts"]
 
     # Add nodes, need to be processed first, otherwise index assignment will fail for edges
@@ -245,7 +245,7 @@ route("/api/add-parts", method = POST) do
     end
 
     dataOut = generate_json_acset(model)
-    return JSON.json(dataOut)
+    return json(dataOut)
 end
 
 
@@ -254,7 +254,7 @@ end
 # TODO
 ################################################################################
 route("/api/rem-parts", method = POST) do
-    return JSON.json(
+    return json(
          Dict([
                (:msg, "Not implemented")
          ])
@@ -276,7 +276,7 @@ end
 ################################################################################
 route("/api/simulate", method = POST) do
     payload = jsonpayload()
-    model = parse_json_acset(LabelledPetriNet, JSON.json(payload["model"]))
+    model = parse_json_acset(LabelledPetriNet, json(payload["model"]))
 
     variableNames = []
     variables = Float32[]
@@ -297,7 +297,7 @@ route("/api/simulate", method = POST) do
     problem = ODEProblem(vectorfield(temp), variables, (0.0, 100.0), parameters);
     solution = solve(problem, Tsit5(), abstol=1e-8);
 
-    return JSON.json(
+    return json(
          Dict([
                (:t, solution.t),
                (:u, solution.u),
