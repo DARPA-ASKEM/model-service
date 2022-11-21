@@ -346,9 +346,9 @@ route("/api/models/model-composition", method = POST) do
                 return JSON.json("statesToMerge array is missing model name: $modelName")
             end
             stateIsFound = false
+            stateNameToMerge = statesToMerge[i][modelName]
             # Loop through model state names
             for j in 1:length(data[modelName]["S"]) 
-                stateNameToMerge = statesToMerge[i][modelName]
                 modelStateName = data[modelName]["S"][j]["sname"]
                 # Save ID of model state name which is going to be merged
                 if stateNameToMerge == modelStateName 
