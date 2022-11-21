@@ -10,8 +10,7 @@ using UUIDs
 using Genie
 using Genie.Requests
 using Genie.Renderer.Json
-using JSON
-using JSON: json
+using JSON: json, parse
 
 using Catlab
 using Catlab.CategoricalAlgebra
@@ -318,7 +317,7 @@ end
 # }
 ################################################################################
 route("/api/models/model-composition", method = POST) do
-    data = JSON.parse(rawpayload()) # Converts JSON to dictionary thoroughly
+    data = parse(rawpayload()) # Converts JSON to dictionary thoroughly
 
     # Check for invalid input
     if !haskey(data, "modelA") || !haskey(data, "modelB") || !haskey(data, "statesToMerge")
