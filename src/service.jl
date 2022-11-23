@@ -375,9 +375,9 @@ route("/api/models/model-composition", method = POST) do
 
         # Merge names, plan to remove name from modelB
         mergedModel["S"][IDsToMerge["modelA"][i]]["sname"] = string(nameToMergeA, nameToMergeB)
-        modelB["S"][IDsToMerge["modelB"][i]] = Dict("sname" => 0) # Replace index which holds sname with 0
+        modelB["S"][IDsToMerge["modelB"][i]]["sname"] = nothing # Replace index which holds sname with nothing
     end
-    deleteat!(modelB["S"], findall(i -> i == Dict("sname" => 0), modelB["S"])) # Remove names that were merged from modelB
+    deleteat!(modelB["S"], findall(i -> i == Dict("sname" => nothing), modelB["S"])) # Remove names that were merged from modelB
 
     append!(mergedModel["S"], modelB["S"]) # Append the rest of the modelB state names that don't merge with modelA states
     append!(mergedModel["T"], modelB["T"]) # Append modelB transitions to modelA
