@@ -56,6 +56,90 @@ function stratificationEndPoint(modelAID, modelBID, typeModelID)
     return json(stratifiedModel)
 end
 
+#When provided 2 vectors assume we are also provided typed models
+function stratificationWithTypeEndPoint(modelAID,modelBID)
+    keyA = payload(modelAID)
+    keyB = payload(modelBID)
+    if !haskey(typedModelDict, keyA) || !haskey(typedModelDict,keyB)
+        return json("One or more provided models could not be found")
+    end
+    modelATyped = typedModelDict[keyA]
+    modelBTyped = typedModelDict[keyB]
+    res = apex(pullback(modelATyped,modelBTyped))
+    res = appendIndexes(res) #Add indexes to transitions to prevent identical transition names
+    stratifiedModel = generate_json_acset(res)    
+    println(" Typed Stratify: ")
+    println(stratifiedModel)
+    return json(stratifiedModel)
+end
+
+function stratifyWithTypedModelsEndPoint(modelAID, modelBID)
+    println("Hit Stratify with typed models")
+    keyA = payload(modelAID)
+    keyB = payload(modelBID)
+    if !haskey(typedModelDict,keyA) || !haskey(typedModelDict,keyB)
+        return json("One or more provided models could not be found")
+    end
+    modelATyped = typedModelDict[keyA]
+    modelBTyped = typedModelDict[keyB]
+    res = apex(pullback(modelATyped,modelBTyped)) #stratify 2 models
+    res = appendIndexes(res) #Add indexes to transitions to prevent identical transition names
+    stratifiedModel = generate_json_acset(res) 
+    return json(stratifiedModel)
+end
+
+#TODO: Fix mapping vector to allow for more than just T
+function typeEndPoint(modelAID, typeModelID, providedMapping)
+    keyA = payload(modelAID)
+    keyType = payload(typeModelID)
+    mappingVectorString = payload(providedMapping)
+    if !haskey(modelDict, keyA) || !haskey(modelDict, keyType)
+        return json("one or more models not found")
+    end
+    mappingVector = parse.(Int, split(chop(mappingVectorString; head=1, tail=1), ',')) #Convert from string to vector of int
+    modelA = modelDict[keyA]
+    typesP = modelDict[keyType]
+    types = map(typesP, Name=name->nothing) 
+
+    modelATyped = homomorphism(modelA, types;
+        initial=(T=mappingVector,),
+        #initial=(T=mappingVector,I=[1,2,3,3],O=[1,2,3,3]),
+        type_components=(Name=x->nothing,)
+    )
+
+    #add typed model to dictionary 
+    modelId = string(UUIDs.uuid4())
+    typedModelDict[modelId] = modelATyped
+
+    println("Provided Model 1:")
+    println(keyA)
+    println(modelA)
+    println("Provided Type Model")
+    println(keyType)
+    println(typesP)
+    println("Provided Mapping")
+    println(mappingVectorString)
+
+    return json("Typed Model ID: " * modelId)
+
+end
+
+#used to parse vector parameters in stratification
+#Eg) "[[:disease], [:disease,:infect]]"
+function stringTo2DArray(aString)
+    arr = split(chop(aString; head=2,tail=2),"[")
+    println("Array: ") 
+    println(arr)
+    for i in arr
+        aVal = replace(i,"["=>"")
+        aVal = replace(aVal,"]"=>"")
+        manyVals = split(aVal,",")
+        println("Many Vals")
+        println(typeof(manyVals))
+    end
+end
+
+
 """
 I am quite surprised we need to add the following two functions. Seems like they should be in CatLab to me
 Modify a typed petri net to add cross terms

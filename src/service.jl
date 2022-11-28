@@ -23,6 +23,7 @@ include("./model-transform/stratification.jl")
 
 
 const modelDict = Dict{String, LabelledPetriNet}()
+const typedModelDict = Dict{String, ACSetTransformation}()
 
 
 # Retrieve a model
@@ -194,8 +195,15 @@ route("/api/models/stratify/:modelAID/:modelBID/:typeModelID") do
     return stratifiedModel
 end
 
+route("api/models/type/:modelAID/:typeModelID/:mappingVector") do
+    typeModelIDMessage = typeEndPoint(:modelAID,:typeModelID,:mappingVector)
+    return typeModelIDMessage
+end
 
-
+route("/api/models/stratifyWithTypedModels/:modelAID/:modelBID") do
+    stratifiedModel = stratifyWithTypedModelsEndPoint(:modelAID, :modelBID)
+    return stratifiedModel
+end
 
 
 
