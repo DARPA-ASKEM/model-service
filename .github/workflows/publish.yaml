@@ -5,6 +5,7 @@
 name: Build Docker Images
 # yamllint disable-line rule:truthy
 on:
+  workflow_dispatch:
   push:
     branches: ['main']
     tags: ['*']
