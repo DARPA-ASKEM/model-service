@@ -3,8 +3,8 @@
 # Container Registry using HCL Bake file.
 
 name: Build Docker Images
-
-on:  # yamllint disable-line rule:truthy
+# yamllint disable-line rule:truthy
+on:
   workflow_dispatch:
   push:
     branches: ['main']
@@ -47,7 +47,7 @@ jobs:
     needs:
       - verify
       - tag-generator
-    uses: darpa-askem/.github/.github/workflows/bake-publish.yaml@main
+    uses: darpa-askem/.github/.github/workflows/bake-publish.yml@main
     with:
       file: 'docker-bake.hcl'
       group: 'prod'
