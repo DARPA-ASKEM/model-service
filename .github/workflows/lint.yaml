@@ -1,0 +1,16 @@
+---
+# Lint and Format files.
+# Linting YAML/YML
+
+name: Lint & Format
+on:  # yamllint disable-line rule:truthy
+  workflow_call:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  lintDocker:
+    name: Lint Docker Files
+    uses: ./.github/workflows/lint-docker.yaml
