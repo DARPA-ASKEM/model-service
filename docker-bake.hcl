@@ -37,8 +37,9 @@ group "default" {
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+# Removed linux/arm64 for now to ass CI build - Dec 2022
 target "_platforms" {
-  platforms = ["linux/amd64", "linux/arm64"]
+  platforms = ["linux/amd64"]
 }
 
 target "model-service-base" {
