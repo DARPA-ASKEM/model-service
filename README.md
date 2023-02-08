@@ -1,7 +1,24 @@
 # Model Service
-This is a webservice that provies a REST-API wrappers around Julia and [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl). 
+This is a webservice that provies REST-API wrappers around Julia and [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl). 
+In the current form (Feb 2023) it provides features to create, manipulat, and transform ODE/Petrinet models.
 
-## Docker image
+## Dependencies
+Model service is compatible and built with Julia 1.8.x.
+
+## Running locally
+From the project directory, start `julia`
+```
+# Initialize
+using Pkg;
+Pkg.activate(".");
+
+# Run the webserver
+using ModelService;
+ModelService.start();
+```
+
+
+## Build docker image
 The Dockerfile provides a runnable web-service
 
 ```
