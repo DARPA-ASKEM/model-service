@@ -1,15 +1,16 @@
-FROM julia:1.8.1
+# See https://github.com/GenieFramework/Genie.jl/issues/174
+FROM julia:1.7.3
 
-COPY src /model-service
+WORKDIR /model-service
 
-# Pre-install Catlab related dependencies
-RUN julia -e 'import Pkg; Pkg.update()' && \
-    julia -e 'import Pkg; Pkg.add("UUIDs"); using UUIDs' && \
-    julia -e 'import Pkg; Pkg.add(Pkg.PackageSpec(; name="Catlab", version="0.14.8")); using Catlab' && \
-    julia -e 'import Pkg; Pkg.add(Pkg.PackageSpec(; name="AlgebraicPetri", version="0.7.3")); using AlgebraicPetri' && \
-    julia -e 'import Pkg; Pkg.add(Pkg.PackageSpec(; name="DifferentialEquations", version="7.5.0")); using DifferentialEquations' && \
-    julia -e 'import Pkg; Pkg.add(Pkg.PackageSpec(; name="OrdinaryDiffEq", version="6.35.0")); using OrdinaryDiffEq' && \
-    julia -e 'import Pkg; Pkg.add("Genie"); using Genie' && \
-    julia -e 'import Pkg; Pkg.add("JSON"); using JSON'
+# Install requirements
+COPY Manifest.toml  /model-service/
+COPY Project.toml /model-service/
 
-CMD ["julia", "model-service/service.jl"]
+# Install local package
+COPY src/ /model-service/src/
+RUN julia -e 'using Pkg; Pkg.activate("."); Pkg.instantiate(); Pkg.precompile();'
+
+# CMD [ "julia", "-e", "using Pkg; Pkg.activate(\".\"); include(\"/model-service/src/service.jl\"); ModelService.start()" ]
+CMD [ "julia", "-e", "using Pkg; Pkg.activate(\".\"); include(\"/model-service/src/ModelService.jl\"); ModelService.start()" ]
+
