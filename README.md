@@ -11,6 +11,7 @@ From the project directory, start `julia`
 # Initialize
 using Pkg;
 Pkg.activate(".");
+Pkg.instantiate();
 
 # Run the webserver
 using ModelService;
