@@ -1,4 +1,4 @@
-module demo
+module ModelService
 
 # See Genie framework example here
 # https://genieframework.github.io/Genie.jl/dev/tutorials/5--Handling_Query_Params.html
@@ -141,7 +141,7 @@ end
 #     <name>: val
 #   },
 #   parameters: {
-#     <name>: val 
+#     <name>: val
 #   }
 # }
 route("/api/models/:model_id/simulate", method = POST) do
@@ -187,7 +187,7 @@ end
 #1) Model A -> LabelledPetriNet
 #2) Model B -> LabelledPetriNet
 #3) TypeP -> LabelledPetriNet
-#TODO: Chat with TA2 to understand better. Especially on the vectors provided to function as theyre hard coded 
+#TODO: Chat with TA2 to understand better. Especially on the vectors provided to function as theyre hard coded
 #eg) "initial=(T=[1,2,2],I=[1,2,3,3],O=[1,2,3,3])" "[:strata],[:strata],[:strata],[]"
 route("/api/models/stratify/:modelAID/:modelBID/:typeModelID") do
     stratifiedModel = stratificationEndPoint(:modelAID,:modelBID,:typeModelID)
@@ -341,17 +341,17 @@ route("/api/models/model-composition", method = POST) do
             return json("$modelName is missing S, T, I, O attribute")  # Only level checked for model keys, sname/tname/os etc. are not checked yet
         end
         # Loop through states to merge
-        for i in 1:length(statesToMerge) 
+        for i in 1:length(statesToMerge)
             if !haskey(statesToMerge[i], modelName)
                 return json("statesToMerge array is missing model name: $modelName")
             end
             stateIsFound = false
             stateNameToMerge = statesToMerge[i][modelName]
             # Loop through model state names
-            for j in 1:length(data[modelName]["S"]) 
+            for j in 1:length(data[modelName]["S"])
                 modelStateName = data[modelName]["S"][j]["sname"]
                 # Save ID of model state name which is going to be merged
-                if stateNameToMerge == modelStateName 
+                if stateNameToMerge == modelStateName
                     if j in IDsToMerge[modelName]
                         return json("The same ID can't be merged twice.")
                     end
@@ -395,7 +395,7 @@ route("/api/models/model-composition", method = POST) do
 
         for IDs in modelB[IO] # IDs = {os: stateID, ot: transitionID} or {is: stateID, it: transitionID}
             # If the place is supposed to merge make the ID of the place from modelB the same as the one from modelA
-            if IDs[stateID] in IDsToMerge["modelB"] 
+            if IDs[stateID] in IDsToMerge["modelB"]
                 index = findfirst(id -> id == IDs[stateID], IDsToMerge["modelB"])
                 IDs[stateID] = IDsToMerge["modelA"][index]
             # If we are coming across the same ID again we should increase it by the same amount we did before
@@ -417,19 +417,21 @@ route("/api/models/model-composition", method = POST) do
     return json(mergedModel)
 end
 
-# Configuration
-# FIXME: Remove this later when quarkus API sever is fully configured to do forwarding/proxying routes
-Genie.config.cors_headers["Access-Control-Allow-Origin"] = "*"
-Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
-Genie.config.cors_headers["Access-Control-Allow-Methods"] ="GET,POST,PUT,DELETE,OPTIONS"
-Genie.config.cors_allowed_origins = ["*"]
+function start()
+		# Configuration
+		# FIXME: Remove this later when quarkus API sever is fully configured to do forwarding/proxying routes
+		Genie.config.cors_headers["Access-Control-Allow-Origin"] = "*"
+		Genie.config.cors_headers["Access-Control-Allow-Headers"] = "Content-Type"
+		Genie.config.cors_headers["Access-Control-Allow-Methods"] ="GET,POST,PUT,DELETE,OPTIONS"
+		Genie.config.cors_allowed_origins = ["*"]
 
-Genie.Configuration.config!(
-   cors_allowed_origins = ["*"]
-)
+		Genie.Configuration.config!(
+			 cors_allowed_origins = ["*"]
+		)
 
+		# Start the API
+		up(8888, "0.0.0.0", async = false)
+end
 
-# Start the API
-up(8888, "0.0.0.0", async = false)
 
 end # module
