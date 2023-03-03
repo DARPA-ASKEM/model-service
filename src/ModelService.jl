@@ -24,6 +24,10 @@ include("./model-transform/stratification.jl")
 
 const modelDict = Dict{String, LabelledPetriNet}()
 
+# heatlhcheck
+route("/") do
+	return json("model-service running")
+end
 
 # Retrieve a model
 route("/api/models/:model_id") do
@@ -36,7 +40,6 @@ route("/api/models/:model_id") do
     model = modelDict[key]
     return json(model)
 end
-
 
 # Create a new empty model
 route("/api/models", method = PUT) do
