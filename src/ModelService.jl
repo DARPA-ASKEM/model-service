@@ -32,6 +32,18 @@ route("/") do
 end
 
 # convert petri to latex
+#
+# This expects a json body of a petri ascet:
+#
+# {
+#   model: {
+#     S: [ ...]
+#     T: [ ...]
+#     I: [ ...]
+#     O: [ ...]
+#   }
+# }
+#
 route("/api/petri-2-latex", method = POST) do
     payload = jsonpayload()
     model = parse_json_acset(LabelledPetriNet, json(payload["model"]))
