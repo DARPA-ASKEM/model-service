@@ -19,6 +19,8 @@ using Catlab.WiringDiagrams
 using Catlab.Graphics.Graphviz
 using AlgebraicPetri
 using OrdinaryDiffEq
+using EasyModelAnalysis
+using Latexify
 include("./model-transform/stratification.jl")
 
 
@@ -27,6 +29,36 @@ const modelDict = Dict{String, LabelledPetriNet}()
 # heatlhcheck
 route("/") do
 	return json("model-service running")
+end
+
+# convert petri to latex
+#
+# This expects a json body of a petri ascet:
+#
+# {
+#   model: {
+#     S: [ ...]
+#     T: [ ...]
+#     I: [ ...]
+#     O: [ ...]
+#   }
+# }
+#
+route("/api/petri-2-latex", method = POST) do
+    payload = jsonpayload()
+    model = parse_json_acset(LabelledPetriNet, json(payload["model"]))
+		model_odesys = ODESystem(model)
+		model_latex = latexify(model_odesys)
+		println(model_latex.s)
+
+		return model_latex.s
+
+		# JSON adds escape strings
+    # return json(
+    #      Dict([
+    #            (:latex, model_latex)
+    #      ])
+    # )
 end
 
 # Retrieve a model
