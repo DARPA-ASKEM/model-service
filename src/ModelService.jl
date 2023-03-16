@@ -36,29 +36,20 @@ end
 # This expects a json body of a petri ascet:
 #
 # {
-#   model: {
-#     S: [ ...]
-#     T: [ ...]
-#     I: [ ...]
-#     O: [ ...]
-#   }
+#   S: [ ...]
+#   T: [ ...]
+#   I: [ ...]
+#   O: [ ...]
 # }
 #
-route("/api/petri-2-latex", method = POST) do
+route("/api/petri-to-latex", method = POST) do
     payload = jsonpayload()
-    model = parse_json_acset(LabelledPetriNet, json(payload["model"]))
+    model = parse_json_acset(LabelledPetriNet, json(payload))
 		model_odesys = ODESystem(model)
 		model_latex = latexify(model_odesys)
 		println(model_latex.s)
 
 		return model_latex.s
-
-		# JSON adds escape strings
-    # return json(
-    #      Dict([
-    #            (:latex, model_latex)
-    #      ])
-    # )
 end
 
 # Retrieve a model
