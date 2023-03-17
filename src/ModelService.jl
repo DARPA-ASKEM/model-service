@@ -42,7 +42,7 @@ end
 #   O: [ ...]
 # }
 #
-route("/api/models/petri-to-latex", method = POST) do
+route("/api/petri-to-latex", method = POST) do
     payload = jsonpayload()
     model = parse_json_acset(LabelledPetriNet, json(payload))
 		model_odesys = ODESystem(model)
