@@ -14,9 +14,14 @@ using AlgebraicPetri
 using ModelingToolkit
 using Latexify
 
+include("./ASKEMPetriNets.jl")
+
 import YAML: load
 using SwagUI
 import SwaggerMarkdown: build, @swagger, OpenAPI, DOCS
+
+
+export start!
 
 # heatlhcheck
 @swagger """
@@ -79,8 +84,12 @@ route("/api/petri-to-latex", method = POST) do
 		return model_latex.s
 end
 
+
+route("/api/stratify", method=POST) do
+end
+
 # Generate swagger-ui docs
-info = Dict("title" => "Simulation Service", "version" => "0.1.0")
+info = Dict("title" => "Model Service", "version" => "0.1.0")
 openAPI = OpenAPI("3.0.0", info)
 openAPI.paths = load(join(DOCS)) # NOTE: Has to be done manually because it's broken in SwaggerMarkdown
 documentation = build(openAPI)
@@ -89,7 +98,7 @@ route("/docs") do
     render_swagger(documentation)
 end
 
-function start()
+function start!()
 	  println("Starting model service")
 		# Configuration
 		# FIXME: Remove this later when quarkus API sever is fully configured to do forwarding/proxying routes
