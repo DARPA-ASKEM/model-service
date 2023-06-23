@@ -1,4 +1,3 @@
-# Module updated June 13, 2023 from https://github.com/DARPA-ASKEM/Model-Representations/pull/27
 module ASKEMPetriNets
 
 export to_petri, to_typed_petri, update_properties!, update_json!, update!
