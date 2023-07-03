@@ -1,5 +1,5 @@
 # See https://github.com/GenieFramework/Genie.jl/issues/174
-FROM julia:1.8.5
+FROM julia:1.9
 
 WORKDIR /model-service
 
