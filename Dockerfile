@@ -12,5 +12,5 @@ COPY src/ /model-service/src/
 RUN julia -e 'using Pkg; Pkg.activate("."); Pkg.instantiate(); Pkg.precompile();'
 
 # CMD [ "julia", "-e", "using Pkg; Pkg.activate(\".\"); include(\"/model-service/src/service.jl\"); ModelService.start()" ]
-CMD [ "julia", "-e", "using Pkg; Pkg.activate(\".\"); include(\"/model-service/src/ModelService.jl\"); ModelService.start()" ]
+CMD [ "julia", "-e", "using Pkg; Pkg.activate(\".\"); include(\"/model-service/src/ModelService.jl\"); ModelService.start!()" ]
 

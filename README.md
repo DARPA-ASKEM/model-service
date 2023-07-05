@@ -15,7 +15,7 @@ Pkg.instantiate();
 
 # Run the webserver
 include("./src/ModelService.jl")
-ModelService.start();
+ModelService.start!();
 ```
 
 
