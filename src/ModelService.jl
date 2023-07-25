@@ -99,9 +99,9 @@ end
              schema:
                  type: object
                  properties:
-                     baseMOdel:
+                     baseModel:
                          type: object
-                     fluxModel:
+                     strataModel:
                          type: object
   responses:
      '200':
@@ -114,10 +114,10 @@ route("/api/stratify", method=POST) do
 	jsonData = parse(rawPayload)
 
 	baseModel = jsonData["baseModel"]
-	fluxModel = jsonData["fluxModel"]
+	strataModel = jsonData["strataModel"]
 
 	x = TypedASKEMPetriNet(ASKEMPetriNet(baseModel))
-	y = TypedASKEMPetriNet(ASKEMPetriNet(fluxModel))
+	y = TypedASKEMPetriNet(ASKEMPetriNet(strataModel))
 
 	result = StratifiedASKEMPetriNet(x, y)
 
