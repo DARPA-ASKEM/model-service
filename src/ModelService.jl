@@ -85,6 +85,20 @@ route("/api/petri-to-latex", method = POST) do
 		return model_latex.s
 end
 
+route("/api/petri-to-latex-json", method = POST) do
+    payload = jsonpayload()
+    model = parse_json_acset(LabelledPetriNet, json(payload))
+		model_odesys = ODESystem(model)
+		model_latex = latexify(model_odesys)
+		println(model_latex.s)
+    return json(
+         Dict([
+               (:latex, model_latex.s)
+         ])
+    )
+end
+
+
 
 @swagger """
 /api/stratify:
