@@ -37,9 +37,13 @@ group "default" {
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-# Removed linux/arm64 for now to ass CI build - Dec 2022
+# Used by the metafile GH action
+# DO NOT ADD ANYTHING HERE THIS WILL BE POPULATED DYNAMICALLY
+# MAKE SURE THIS IS INHERITED NEAR THE END SO THAT IT DOES NOT GET OVERRIDEN
+target "docker-metadata-action" {}
+
 target "_platforms" {
-  platforms = ["linux/amd64"]
+  platforms = ["linux/amd64", "linux/arm64"]
 }
 
 target "model-service-base" {
@@ -48,6 +52,7 @@ target "model-service-base" {
 	dockerfile = "Dockerfile"
 }
 
+# NOTE: target name will be used as the name of the image
 target "model-service" {
-  inherits = ["_platforms", "model-service-base"]
+  inherits = ["model-service-base", "docker-metadata-action", "_platforms"]
 }

@@ -23,8 +23,10 @@ jobs:
         with:
           node-version: 18.8.0
 
+      # New rule was introduced in v18.6, bypassing it here
       - name: Install CommitLint Dependency
-        run: yarn add @commitlint/config-conventional
+        run: yarn add @commitlint/config-conventional@v18.5
+
       # Uncomment this if you want to validate all commits in this PR not just the PR comment
       # - uses: wagoid/commitlint-github-action@v5
       - name: Lint the PR message
