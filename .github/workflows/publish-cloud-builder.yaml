@@ -1,0 +1,45 @@
+---
+# Automatically build Docker images using a cloud builder and publish them to a
+# container registry using HCL Bake file.
+
+name: Build Docker Images using Cloud Builder
+
+on:
+  push:
+    branches: ['main']
+    tags: ['*']
+
+jobs:
+  bake-target:
+    name: Determine bake target
+    runs-on: ubuntu-22.04 # don't use the big runners for this small step
+    outputs:
+      target: ${{ steps.generate.outputs.bake_target }}
+    steps:
+      - name: Determine target
+        id: generate
+        run: |
+          if [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            TGT=default
+          else
+            TGT=prod
+          fi
+          echo "$TGT"
+          echo "bake_target=${TGT,,}" >> ${GITHUB_OUTPUT}
+      - name: Show Generated Target
+        run: echo ${{ steps.generate.outputs.bake_target }}
+
+  # Build and Publish all targets associated with specified group
+  bake:
+    needs:
+      - bake-target
+    uses: darpa-askem/.github/.github/workflows/bake-publish-cloud-builder.yaml@main
+    with:
+      file: 'docker/docker-bake.hcl'
+      group: ${{ needs.bake-target.outputs.target }}
+      registry: 'ghcr.io'
+      organization: ${{ github.repository_owner }}
+    secrets:
+      username: ${{ secrets.DOCKER_CLOUD_BUILD_USERNAME }}
+      token: ${{ secrets.DOCKER_CLOUD_BUILD_TOKEN }}
+      endpoint: "${{ secrets.DOCKER_CLOUD_BUILD_ENDPOINT }}"
