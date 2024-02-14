@@ -12,7 +12,7 @@ on:
 jobs:
   bake-target:
     name: Determine bake target
-    runs-on: ubuntu-22.04 # don't use the big runners for this small step
+    runs-on: ubuntu-22.04
     outputs:
       target: ${{ steps.generate.outputs.bake_target }}
     steps:
