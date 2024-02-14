@@ -35,7 +35,7 @@ jobs:
       - bake-target
     uses: darpa-askem/.github/.github/workflows/bake-publish-cloud-builder.yaml@main
     with:
-      file: 'docker/docker-bake.hcl'
+      file: 'docker-bake.hcl'
       group: ${{ needs.bake-target.outputs.target }}
       registry: 'ghcr.io'
       organization: ${{ github.repository_owner }}

@@ -42,7 +42,6 @@ group "default" {
 # MAKE SURE THIS IS INHERITED NEAR THE END SO THAT IT DOES NOT GET OVERRIDEN
 target "docker-metadata-action" {}
 
-# Removed linux/arm64 for now to ass CI build - Dec 2022
 target "_platforms" {
   platforms = ["linux/amd64", "linux/arm64"]
 }
