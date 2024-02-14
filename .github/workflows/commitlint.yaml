@@ -22,7 +22,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18.8.0
-          cache: 'yarn'
 
       # New rule was introduced in v18.6, bypassing it here
       - name: Install CommitLint Dependency
